@@ -5,6 +5,13 @@
 #include <omp.h>
 #include <math.h>
 
+/*
+    command to compilte:
+    gcc -Wall -std=c99 -fopenmp -o quicksort quick_sort.c
+    command to execute:
+    ./quicksort [input] [number of threads]
+*/
+
 void swap(int* a, int* b) {
     int temp = *a;
     *a = *b;
@@ -15,15 +22,6 @@ int partition(int *arr, int low, int high) {
     int pivot = arr[high];
     int i = low - 1;
 
-    
-    int thread_id = omp_get_thread_num();
-    printf("Thread %d is starting work\n", thread_id);
-    #pragma omp critical
-    {
-        // sleep(1); // Use sleep(1) on Unix or Sleep(1000) on Windows
-    }
-
-    // #pragma omp parallel for
     for (int j = low; j < high; j++) {
         if (arr[j] < pivot) {
             i++;
@@ -31,29 +29,20 @@ int partition(int *arr, int low, int high) {
         }
     }
     swap(&arr[i + 1], &arr[high]);
-    printf("Thread %d has finished work\n", thread_id);
     return i + 1;
 }
 
 void quickSort(int *arr, int low, int high) {
     if (low < high) {
         int pi = partition(arr, low, high);
-
-        #pragma omp parallel
+        
+        #pragma omp task
         {
-            #pragma omp single
-            {
-                #pragma omp task
-                {
-                    quickSort(arr, low, pi - 1);
-                }
-                #pragma omp task
-                {
-                    quickSort(arr, pi + 1, high);
-                }
-
-                #pragma omp taskwait
-            }
+            quickSort(arr, low, pi - 1);
+        }
+        #pragma omp task
+        {
+            quickSort(arr, pi + 1, high);
         }
     }
 }
@@ -110,11 +99,18 @@ int main(int argc, char *argv[]) {
     printf("Original array (first 10 elements): \n");
     printArray(arr, 10);  // Print first 10 elements
 
-    omp_set_num_threads(num_threads);  
     omp_set_nested(1);
+    omp_set_dynamic(0);
+    omp_set_num_threads(num_threads);  
 
     double start_time = omp_get_wtime();  // Start time measurement
-    quickSort(arr, 0, n - 1);
+    #pragma omp parallel
+    {
+        #pragma omp single
+        {
+            quickSort(arr, 0, n - 1);
+        }
+    }
     double end_time = omp_get_wtime();    // End time measurement
 
     printf("Sorted array (first 10 elements): \n");
