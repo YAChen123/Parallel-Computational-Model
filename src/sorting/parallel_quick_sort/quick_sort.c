@@ -3,7 +3,6 @@
 #include "quick_sort.h"
 #include <time.h>
 #include <omp.h>
-#include <math.h>
 
 /*
     command to compilte:
